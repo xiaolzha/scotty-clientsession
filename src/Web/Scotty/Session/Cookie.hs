@@ -10,6 +10,7 @@ module Web.Scotty.Session.Cookie (
 import           Control.Monad.Reader (MonadIO, liftIO)
 import           Data.Time.Clock (secondsToDiffTime)
 import qualified Data.HashMap.Strict as M
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Web.Scotty.Trans as S
@@ -19,7 +20,7 @@ import qualified Data.ByteString as B
 import qualified Blaze.ByteString.Builder as BB
 
 
-type Session = M.HashMap B.ByteString B.ByteString
+type Session = M.HashMap T.Text T.Text
 
 sessionCookieName :: B.ByteString
 sessionCookieName = "CLIENT_SESSION"
@@ -36,7 +37,7 @@ writeSession key session expiration = do
     S.addHeader "Set-Cookie" $ mkSetCookieText $ mkSetCookie encrypted expiration
     where
         sessionMapToString :: Session -> B.ByteString
-        sessionMapToString sessionMap =  BB.toByteString $ CK.renderCookies $ M.toList sessionMap
+        sessionMapToString sessionMap =  BB.toByteString $ CK.renderCookiesText $ M.toList sessionMap
         mkSetCookie :: B.ByteString -> Maybe Integer -> CK.SetCookie
         mkSetCookie encrypted Nothing = CK.def {CK.setCookieName = sessionCookieName, CK.setCookieValue = encrypted, CK.setCookieHttpOnly = True }
         mkSetCookie encrypted (Just maxAge) = CK.def {CK.setCookieName = sessionCookieName, CK.setCookieValue = encrypted, CK.setCookieHttpOnly = True, CK.setCookieMaxAge = (Just $ secondsToDiffTime maxAge) }
@@ -53,7 +54,7 @@ deserializeCookie (Just cookieHeader) key = do
         parseCookieValue fullCookie = CK.setCookieValue $ CK.parseSetCookie $ TE.encodeUtf8 $ TL.toStrict fullCookie
         toSessionMap :: Maybe B.ByteString -> Session
         toSessionMap Nothing = M.empty
-        toSessionMap (Just val) = M.fromList $ CK.parseCookies val
+        toSessionMap (Just val) = M.fromList $ CK.parseCookiesText val
 
 
 
