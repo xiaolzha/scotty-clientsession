@@ -5,7 +5,7 @@ name:                scotty-clientsession
 version:             0.1.0.0
 synopsis:            A session utility for scotty, using cookie
 -- description:         
-homepage:            http://www.github.com/garriot
+homepage:            https://github.com/Garriot/scotty-clientsession
 license:             BSD3
 license-file:        LICENSE
 author:              Garriot Zhang
