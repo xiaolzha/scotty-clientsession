@@ -4,6 +4,7 @@ module Web.Scotty.Session.Cookie (
         Session
       , getSession
       , writeSession
+      , clearSession
     ) where
 
 
@@ -31,6 +32,9 @@ getSession key = do
     session <- liftIO $ deserializeCookie cookieHeader key
     return session
 
+clearSession :: (S.ScottyError e, MonadIO m) => S.ActionT e m ()
+clearSession = S.addHeader "Set-Cookie" $ mkSetCookieText $ mkSetCookie "" Nothing
+
 writeSession :: (S.ScottyError e, MonadIO m) => CS.Key -> Session -> Maybe Integer -> S.ActionT e m ()
 writeSession key session expiration = do
     encrypted <- liftIO $ CS.encryptIO key $ sessionMapToString session
@@ -38,11 +42,13 @@ writeSession key session expiration = do
     where
         sessionMapToString :: Session -> B.ByteString
         sessionMapToString sessionMap =  BB.toByteString $ CK.renderCookiesText $ M.toList sessionMap
-        mkSetCookie :: B.ByteString -> Maybe Integer -> CK.SetCookie
-        mkSetCookie encrypted Nothing = CK.def {CK.setCookieName = sessionCookieName, CK.setCookieValue = encrypted, CK.setCookieHttpOnly = True }
-        mkSetCookie encrypted (Just maxAge) = CK.def {CK.setCookieName = sessionCookieName, CK.setCookieValue = encrypted, CK.setCookieHttpOnly = True, CK.setCookieMaxAge = (Just $ secondsToDiffTime maxAge) }
-        mkSetCookieText :: CK.SetCookie -> TL.Text
-        mkSetCookieText setCookie = TL.fromStrict $ TE.decodeUtf8 $ BB.toByteString $ CK.renderSetCookie setCookie 
+        
+mkSetCookie :: B.ByteString -> Maybe Integer -> CK.SetCookie
+mkSetCookie encrypted Nothing = CK.def {CK.setCookieName = sessionCookieName, CK.setCookieValue = encrypted, CK.setCookieHttpOnly = True }
+mkSetCookie encrypted (Just maxAge) = CK.def {CK.setCookieName = sessionCookieName, CK.setCookieValue = encrypted, CK.setCookieHttpOnly = True, CK.setCookieMaxAge = (Just $ secondsToDiffTime maxAge) }
+
+mkSetCookieText :: CK.SetCookie -> TL.Text
+mkSetCookieText setCookie = TL.fromStrict $ TE.decodeUtf8 $ BB.toByteString $ CK.renderSetCookie setCookie 
 
 deserializeCookie :: Maybe TL.Text -> CS.Key -> IO Session
 deserializeCookie Nothing _ = return M.empty
